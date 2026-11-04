@@ -1,0 +1,13 @@
+# Local SQLite cache (data.json is the source of truth)
+data/app.db
+data/app.db-*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Editors / OS
+.vscode/
+.DS_Store
