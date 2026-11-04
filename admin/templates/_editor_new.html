@@ -1,0 +1,22 @@
+<section class="card">
+  <h1>新增英雄</h1>
+  <form class="form-grid" hx-post="/admin/hero">
+    <label>名稱
+      <input class="input" name="name" required autofocus autocomplete="off" placeholder="例如：莉莉安、元流之子(法師)">
+    </label>
+    <label>主職業
+      <select class="input" name="main_class" required>
+        <option value="">請選擇</option>
+        {% for c in HERO_CLASSES %}<option>{{ c }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>副職業
+      <select class="input" name="sub_class">
+        <option value="">無</option>
+        {% for c in HERO_CLASSES %}<option>{{ c }}</option>{% endfor %}
+      </select>
+    </label>
+    <p class="hint full">名稱為「名稱(型態)」格式時，型態群組會自動設定為括號前的名稱。建立後即可設定頭像、分路、剋制與搭配。</p>
+    <div class="full"><button class="btn primary" type="submit">建立</button></div>
+  </form>
+</section>

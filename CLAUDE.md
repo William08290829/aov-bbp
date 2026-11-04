@@ -43,6 +43,7 @@ admin/                       本機後台（不部署）
   db.py                      engine、session
   models.py                  SQLModel 資料表
   repo.py                    所有資料讀寫（含剋制正負號處理）
+  sync.py                    app.db ⇄ data.json 自動匯出／匯入
   routes.py                  後台頁面與 CRUD
   templates/                 Jinja2
   static/                    後台用的 CSS
@@ -77,6 +78,7 @@ requirements.txt
 ## 常用指令
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate   # 每台電腦各自建立，.venv 不進 git
 pip install -r requirements.txt
 
 # 首次建立資料庫
@@ -156,7 +158,7 @@ class Counter(SQLModel, table=True):
 class Synergy(SQLModel, table=True):
     a_id: int = Field(foreign_key="hero.id", primary_key=True)
     b_id: int = Field(foreign_key="hero.id", primary_key=True)
-    value: int        # >0：好搭；<0：難搭
+    value: int        # >0：好搭（目前只用 +1 / +2）
 
 class Setting(SQLModel, table=True):
     key: str = Field(primary_key=True)
@@ -171,7 +173,7 @@ class Setting(SQLModel, table=True):
   - 剋制是**反對稱**：查 `counter(x, y)` 時，若 `x > y` 就讀 `(y, x)` 並把值取負號。
   - 搭配是**對稱**：`synergy(x, y) == synergy(y, x)`。
   - `value == 0` 時刪除該筆資料，不存 0。
-- 目前 UI 只會寫入 `-1 / 0 / +1`，但欄位是 int，保留之後擴充為 ±2（輕微／強烈）的空間。
+- 剋制：UI 寫入 `-2 ~ +2`（±1 一般、±2 強烈）。搭配：UI 只寫入 `+1 / +2`（好搭／超好搭），不使用負值。欄位都是 int。
 - 在 `repo.py` 提供 `get_counter(x, y)`、`set_counter(x, y, v)`、`get_synergy`、`set_synergy`，所有讀寫都經過這裡，不要在其他地方直接處理正負號。
 - 刪除英雄時，連同其 `HeroLane`、`Counter`、`Synergy` 一起刪除。
 
@@ -219,6 +221,7 @@ class Setting(SQLModel, table=True):
 - `synergies` 每筆 `[a, b, v]`，每對只出現一次。
 - `lanes` 的值是 tier 字串，`null` 表示有走這路但未評級。沒有任何分路的英雄，`lanes` 為 `{}`。
 - `avatar` 沒有頭像時為 `null`。
+- `needs_review`（後台用，選角頁忽略）只在為 `true` 時輸出，以便在多台電腦間保留「待確認」狀態。
 - 輸出時依名稱排序，並採用**一筆一行**的格式，讓 git diff 與合併容易閱讀：每隻英雄、每筆剋制、每筆搭配各佔一行，`settings` 為一行。不可直接用 `json.dump(indent=2)`（會把每筆關係拆成多行）。輸出仍須是合法 JSON。
 
 ```json
@@ -456,15 +459,15 @@ banScore(h) = w_tier · maxTier(h)
 
 ### 右側：英雄編輯區（新增與修改共用）
 
-1. **基本資料**：名稱、主職業、副職業、型態群組（`form_group`，可留空；可從現有群組選擇或輸入新群組）、頭像上傳、「標記為已確認」、刪除按鈕（需二次確認）。
+1. **基本資料**：名稱、主職業、副職業、型態群組（`form_group`，由名稱自動決定、唯讀顯示）、頭像上傳、「標記為已確認」、刪除按鈕（需二次確認）。
 2. **分路與 tier**（和下方的剋制、搭配在**同一個畫面**設定）：
    - 五個分路各一列：勾選框 ＋ `T0 / T1 / T2 / 未評` 選項。勾選後才能選 tier，取消勾選時一併清除該分路的 tier。
    - 每個分路的 tier 各自獨立設定。
    - 變更即時存檔（HTMX），不需要「儲存」按鈕。
    - 區塊旁顯示職業，但標明「職業僅供分類，不影響分路」。
 3. **剋制與搭配**：其他所有英雄的頭像格子，可依職業或分路篩選、可搜尋。每格有兩個切換按鈕：
-   - **對位**：無 → 我剋他 → 他剋我 → 無
-   - **搭配**：無 → 好搭 → 難搭 → 無
+   - **對位**：無 → 剋他(+1) → 超剋他(+2) → 被他剋(−1) → 被他完剋(−2) → 無
+   - **搭配**：無 → 好搭(+1) → 超好搭(+2) → 無（不設定難搭）
    - 狀態以顏色與文字同時表示（不可只靠顏色）。
    - 每次點擊立即透過 HTMX 存檔，不需要「儲存」按鈕。
 
@@ -552,10 +555,10 @@ jobs:
 - **進度統計「有剋制資料的英雄數」**：英雄只要出現在任何一筆 `Counter`（不論是 `a_id` 或 `b_id`）就計入。
 - **禁止英雄與自己建立剋制或搭配關係**（`repo.py` 遇到 `x == y` 時拋出錯誤）。
 - **分路勾選後 tier 預設為「未評」**（`None`）。
-- **剋制／搭配值為 ±2 時的按鈕行為**：尚未決定，目前 UI 只寫入 ±1，遇到時再決定。
+- **剋制／搭配強度**：剋制按鈕循環五種狀態、搭配按鈕循環三種狀態（見「後台 UI」），±2 以較深的實心底色顯示；超出範圍的值點擊時先視為最接近的合法值再往下循環，搭配若有舊的負值則點擊後清除。
 - **刪除英雄時一併刪除頭像檔**。
 - **英雄名稱驗證**：不可為空、不可含 `/ \ : * ? " < > |`，前後空白自動去除；全形括號 `（）` 自動轉為半形 `()`（匯入與後台編輯皆適用）。
-- **後台新增或改名為 `名稱(型態)` 格式時，自動帶入 `form_group`**（可手動修改）。
+- **`form_group` 完全由名稱決定，不可手動輸入**：名稱為 `名稱(型態)` 時 `form_group` = 括號前的名稱，否則為 `None`。匯入、新增、改名時都由 `repo.py` 統一計算；後台只唯讀顯示。
 - **權重預設值**：後台每次啟動時檢查 `Setting`，缺少的 key 補上預設值，已存在的不動。
 - **主職業為空時「標記為已確認」不可點**，並提示先補主職業。
 

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BBP 後台</title>
+  <link rel="stylesheet" href="/static/admin.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/admin.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/admin">BBP 後台</a>
+    <span class="topbar-note">修改會自動存入 <code>site/data/data.json</code>，完成後記得 commit 並 push。</span>
+  </header>
+  {% if sync_status.error %}
+  <div class="banner banner-error" role="alert">
+    <strong>data.json 讀取失敗，已暫停所有寫入。</strong>{{ sync_status.error }}<br>
+    修正 <code>site/data/data.json</code> 後重新整理頁面即可恢復。
+  </div>
+  {% elif imported_notice %}
+  <div class="banner banner-info" role="status">
+    偵測到 <code>data.json</code> 已更新（例如 git pull），已自動重新載入資料庫。
+  </div>
+  {% endif %}
+  {% block body %}{% endblock %}
+  <div id="toasts" aria-live="assertive"></div>
+</body>
+</html>

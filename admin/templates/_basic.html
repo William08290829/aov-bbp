@@ -1,0 +1,56 @@
+{% from "_macros.html" import avatar %}
+<section class="card">
+  <div class="hero-head">
+    {{ avatar(hero, 72) }}
+    <div>
+      <h1>{{ hero.name }}
+        {%- if hero.needs_review %} <span class="tag tag-warn">待確認</span>{% endif %}
+      </h1>
+      <p class="muted">型態群組：
+        {%- if hero.form_group %} {{ hero.form_group }}（同群組：{{ group_members | join("、") }}）
+        {%- else %} 無{% endif %}
+        <span class="hint inline">由名稱自動決定</span>
+      </p>
+    </div>
+    {% if message %}<span class="saved" role="status">✓ {{ message }}</span>{% endif %}
+  </div>
+
+  <form class="form-grid" hx-post="/admin/hero/{{ hero.id }}/basic" hx-target="#basic">
+    <label>名稱
+      <input class="input" name="name" value="{{ hero.name }}" required autocomplete="off">
+    </label>
+    <label>主職業
+      <select class="input" name="main_class" required>
+        {% if hero.main_class not in HERO_CLASSES %}<option value="" selected>請選擇（必填）</option>{% endif %}
+        {% for c in HERO_CLASSES %}<option{% if c == hero.main_class %} selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>副職業
+      <select class="input" name="sub_class">
+        <option value="">無</option>
+        {% for c in HERO_CLASSES %}<option{% if c == hero.sub_class %} selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </label>
+    <div class="full row">
+      <button class="btn primary" type="submit">儲存基本資料</button>
+    </div>
+  </form>
+
+  <div class="row actions">
+    <form hx-post="/admin/hero/{{ hero.id }}/avatar" hx-target="#basic"
+          hx-encoding="multipart/form-data" hx-trigger="change">
+      <label class="btn">上傳頭像<input class="visually-hidden" type="file" name="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"></label>
+    </form>
+    {% if hero.needs_review %}
+      {% if hero.main_class in HERO_CLASSES %}
+      <button class="btn" hx-post="/admin/hero/{{ hero.id }}/review" hx-target="#basic">標記為已確認</button>
+      {% else %}
+      <button class="btn" disabled title="請先補上主職業">標記為已確認</button>
+      <span class="hint inline">請先補上主職業並儲存</span>
+      {% endif %}
+    {% endif %}
+    <span class="spacer"></span>
+    <button class="btn danger" hx-post="/admin/hero/{{ hero.id }}/delete"
+            hx-confirm="確定要刪除「{{ hero.name }}」嗎？它的分路、剋制、搭配資料與頭像檔都會一併刪除，無法復原。">刪除英雄</button>
+  </div>
+</section>

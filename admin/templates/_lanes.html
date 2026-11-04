@@ -1,0 +1,18 @@
+<div class="lanes">
+{% for lane in LANES %}
+  {%- set on = lane in lanes -%}
+  <form class="lane-row{% if on %} on{% endif %}" hx-post="/admin/hero/{{ hero.id }}/lanes/{{ lane | urlencode }}"
+        hx-target="#lanes" hx-trigger="change">
+    <label class="check lane-name"><input type="checkbox" name="enabled"{% if on %} checked{% endif %}> {{ lane }}</label>
+    <div class="seg" role="radiogroup" aria-label="{{ lane }} tier">
+      {% for t in TIERS + [""] %}
+      <label class="seg-opt{% if not on %} disabled{% endif %}">
+        <input type="radio" name="tier" value="{{ t }}"{% if not on %} disabled{% endif %}
+               {%- if on and lanes[lane] == (t or None) %} checked{% endif %}>
+        <span>{{ t or "未評" }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </form>
+{% endfor %}
+</div>

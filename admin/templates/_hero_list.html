@@ -1,0 +1,19 @@
+{% from "_macros.html" import avatar, lane_tags %}
+{% for h in heroes %}
+{%- set lanes = lanes_by_hero.get(h.id, {}) -%}
+<a class="hero-item{% if h.id == current_id %} active{% endif %}" href="/admin/hero/{{ h.id }}"
+   hx-get="/admin/hero/{{ h.id }}" hx-target="#editor" hx-push-url="true"
+   data-name="{{ h.name }}" data-classes="{{ h.main_class }} {{ h.sub_class or '' }}"
+   data-flags="{% if h.needs_review %}review {% endif %}{% if not lanes %}nolane{% endif %}">
+  {{ avatar(h, 36) }}
+  <span class="hero-item-body">
+    <span class="hero-item-name">{{ h.name }}
+      {%- if h.needs_review %} <span class="tag tag-warn">待確認</span>{% endif %}
+      {%- if not lanes %} <span class="tag tag-muted">未設定分路</span>{% endif %}
+    </span>
+    <span class="hero-item-tags">{{ lane_tags(lanes) }}</span>
+  </span>
+</a>
+{% else %}
+<p class="muted pad">尚無英雄。請先執行 <code>python scripts/import_heroes.py</code>。</p>
+{% endfor %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="side-head">
+      <a class="btn primary block" href="/admin/hero/new"
+         hx-get="/admin/hero/new" hx-target="#editor" hx-push-url="true">＋ 新增英雄</a>
+      <div id="stats" hx-get="/admin/stats" hx-trigger="statsChanged from:body">
+        {% include "_stats.html" %}
+      </div>
+      <input id="list-search" class="input" type="search" placeholder="搜尋英雄名稱" autocomplete="off">
+      <div class="chips" id="list-filter" role="group" aria-label="篩選">
+        <button type="button" class="chip on" data-filter="">全部</button>
+        {% for c in HERO_CLASSES %}<button type="button" class="chip" data-filter="class:{{ c }}">{{ c }}</button>{% endfor %}
+        <button type="button" class="chip" data-filter="flag:review">待確認</button>
+        <button type="button" class="chip" data-filter="flag:nolane">未設定分路</button>
+      </div>
+    </div>
+    <nav id="hero-list" class="hero-list" hx-get="/admin/heroes" hx-trigger="heroesChanged from:body">
+      {% include "_hero_list.html" %}
+    </nav>
+  </aside>
+  <main id="editor" class="editor-pane">
+    {% if mode == "edit" %}{% include "_editor.html" %}
+    {% elif mode == "new" %}{% include "_editor_new.html" %}
+    {% else %}
+    <div class="empty-state">
+      <p>從左側選擇要編輯的英雄，或按「新增英雄」。</p>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

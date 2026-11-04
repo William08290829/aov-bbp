@@ -1,0 +1,24 @@
+{% from "_macros.html" import avatar %}
+{%- set olanes = lanes_by_hero.get(o.id, {}) -%}
+<div class="rel{% if c or s %} has{% endif %}" id="rel-{{ o.id }}"
+     data-name="{{ o.name }}" data-classes="{{ o.main_class }} {{ o.sub_class or '' }}"
+     data-lanes="{{ olanes | join(' ') }}" data-has="{{ 1 if (c or s) else 0 }}">
+  <div class="rel-head">{{ avatar(o, 32) }}<span class="rel-name">{{ o.name }}</span></div>
+  <button type="button" class="tog {{ 'pos' if c > 0 else ('neg' if c < 0 else '') }}{{ ' strong' if c > 1 or c < -1 else '' }}"
+          hx-post="/admin/hero/{{ hero_id }}/counter/{{ o.id }}" hx-target="#rel-{{ o.id }}" hx-swap="outerHTML"
+          title="對位：無 → 剋他 → 超剋他 → 被他剋 → 被他完剋 → 無">
+    {%- if c > 1 %}▲▲ 超剋他
+    {%- elif c > 0 %}▲ 剋他
+    {%- elif c < -1 %}▼▼ 被他完剋
+    {%- elif c < 0 %}▼ 被他剋
+    {%- else %}對位：無{% endif -%}
+  </button>
+  <button type="button" class="tog {{ 'good' if s > 0 else ('bad' if s < 0 else '') }}{{ ' strong' if s > 1 else '' }}"
+          hx-post="/admin/hero/{{ hero_id }}/synergy/{{ o.id }}" hx-target="#rel-{{ o.id }}" hx-swap="outerHTML"
+          title="搭配：無 → 好搭 → 超好搭 → 無">
+    {%- if s > 1 %}＋＋ 超好搭
+    {%- elif s > 0 %}＋ 好搭
+    {%- elif s < 0 %}－ 難搭（舊資料，點擊清除）
+    {%- else %}搭配：無{% endif -%}
+  </button>
+</div>

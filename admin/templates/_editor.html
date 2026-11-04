@@ -1,0 +1,34 @@
+{% from "_macros.html" import avatar %}
+<div class="editor" data-hero-id="{{ hero.id }}">
+  <div id="basic">{% include "_basic.html" %}</div>
+
+  <section class="card">
+    <h2>分路與 tier</h2>
+    <p class="hint">職業：{{ class_label(hero) }}（職業僅供分類，不影響分路）</p>
+    <div id="lanes">{% include "_lanes.html" %}</div>
+  </section>
+
+  <section class="card">
+    <h2>剋制與搭配 <span class="hint inline">以「{{ hero.name }}」的角度設定，點擊按鈕即時存檔</span></h2>
+    <div class="rel-filters">
+      <input id="rel-search" class="input" type="search" placeholder="搜尋" autocomplete="off">
+      <select id="rel-class" class="input" aria-label="職業">
+        <option value="">全部職業</option>
+        {% for c in HERO_CLASSES %}<option>{{ c }}</option>{% endfor %}
+      </select>
+      <select id="rel-lane" class="input" aria-label="分路">
+        <option value="">全部分路</option>
+        {% for l in LANES %}<option>{{ l }}</option>{% endfor %}
+      </select>
+      <label class="check"><input id="rel-only" type="checkbox"> 只顯示已設定</label>
+    </div>
+    <p class="hint">對位：無 → 剋他 → 超剋他 → 被他剋 → 被他完剋 → 無；搭配：無 → 好搭 → 超好搭 → 無</p>
+    <div class="rel-grid">
+      {% set hero_id = hero.id %}
+      {% for o in others %}
+        {% set c = counters.get(o.id, 0) %}{% set s = synergies.get(o.id, 0) %}
+        {% include "_rel_cell.html" %}
+      {% endfor %}
+    </div>
+  </section>
+</div>

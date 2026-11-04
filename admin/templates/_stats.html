@@ -1,0 +1,5 @@
+<dl class="stats">
+  <div><dt>已設定分路</dt><dd>{{ stats.with_lanes }} / {{ stats.total }}</dd></div>
+  <div><dt>有剋制資料</dt><dd>{{ stats.with_counters }} / {{ stats.total }}</dd></div>
+  <div><dt>待確認</dt><dd{% if stats.needs_review %} class="warn"{% endif %}>{{ stats.needs_review }}</dd></div>
+</dl>
