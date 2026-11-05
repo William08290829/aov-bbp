@@ -1,0 +1,9 @@
+{
+  "name": "best-ban-pick",
+  "private": true,
+  "type": "module",
+  "description": "No dependencies. Only tells Node that site/js/*.js are ES modules so `node --test tests/js/*.test.js` works.",
+  "scripts": {
+    "test": "node --test tests/js/*.test.js"
+  }
+}

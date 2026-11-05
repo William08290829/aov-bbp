@@ -68,9 +68,11 @@ tests/
   test_repo.py               pytest：後台資料邏輯
   test_admin.py              pytest：後台頁面與 HTMX 端點
   test_stage2.py             pytest：匯出／匯入腳本、設定頁、匯出頁
-  js/                        node --test：推薦引擎
+  js/                        node --test：推薦引擎（*.test.js）
 .github/workflows/deploy.yml
 requirements.txt
+package.json                 沒有任何相依套件，只宣告 "type": "module" 讓 Node 以 ES module 載入 site/js
+pytest.ini
 ```
 
 **`data/app.db` 不進 git**，`site/data/data.json` 才是存在 git 裡的正式資料。`app.db` 只是本機快取：後台會自動匯出與自動匯入（見「多台電腦同步」），一般情況不需要手動執行 `import_data.py`。
@@ -103,7 +105,7 @@ python -m http.server 8080 --directory site
 
 # 測試
 pytest
-node --test tests/js/
+node --test tests/js/*.test.js   # Node 24 不接受目錄參數，需列出檔案
 ```
 
 ---
@@ -515,7 +517,7 @@ jobs:
         id: deployment
 ```
 
-另外新增一個測試 workflow（push 與 pull request 時執行 `pytest` 和 `node --test tests/js/`）。
+另外新增一個測試 workflow（push 與 pull request 時執行 `pytest` 和 `node --test tests/js/*.test.js`）。
 
 ---
 
@@ -574,6 +576,15 @@ jobs:
 - **設定頁**：每個欄位變更即時存檔（HTMX），數值限制在 −100 ~ 100，顯示預設值與「已修改」標記，提供「恢復預設值」（需確認）。
 - **匯出頁**：顯示 `data.json` 的英雄數、剋制／搭配筆數、資料時間，以及 `site/` 底下尚未 commit 的檔案與尚未 push 的 commit（唯讀執行 `git status`），並附上建議指令。
 - 後台頁首加入「英雄／設定／匯出」導覽。
+
+### 第 3 階段（推薦引擎）
+
+- **API**：`matching.js` 的函式接收「每隻英雄可走的分路陣列」（空陣列＝未填分路＝任何分路）：`feasible`、`openLanes`、`fillableLanes(candidateLanes, teamLaneLists)`、`assignLanes`。`engine.js` 提供 `createEngine(data)`，回傳 `getCounter`、`getSynergy`、`isPickable(name, state)`、`openLanes(state)`、`pickSuggestions(state)` → `{ suggestions, openLanes: { us, them } }`、`banSuggestions(state)` → `{ suggestions }`。
+- **理由文字**：剋制 ±1／±2 分別為「剋制 X」「超剋 X」／「被 X 剋」「被 X 完剋」；搭配為「與 X 好搭」「與 X 超好搭」；搶角為「搶角：避免對方用來剋 X」；禁用威脅為「剋制我方 X」「超剋我方 X」；同群組其他型態已被選時，禁用建議的 `cons` 為「同英雄的其他型態已被選」，並帶 `blocked: true`。
+- **同分排序**：分數相同時依名稱（字碼順序）排序，結果固定。
+- **型態群組與反制風險**：候選 `h` 的同群組其他型態不算 `h` 的威脅（選了 `h` 之後它們就不能被選）。
+- **state 中的未知英雄名稱**（例如資料改名後 sessionStorage 的舊狀態）直接忽略。
+- **tier 分數為 0 的項目不列出**；未填分路的英雄 tier 文字為「未評（分路未填）」（只在 `tier_none` 被設為非 0 時出現）。
 
 ### 之後階段
 
