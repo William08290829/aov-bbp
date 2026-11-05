@@ -22,15 +22,30 @@ export const UNFILLED_NOTE = "分路資料未填";
 
 const pairKey = (a, b) => `${a}\u0000${b}`;
 
+/** Keep only lane choices for heroes that are actually picked, with valid lane names. */
+function cleanLaneChoices(choices, picks) {
+  const result = {};
+  for (const name of picks) {
+    const lane = choices?.[name];
+    if (LANES.includes(lane)) result[name] = lane;
+  }
+  return result;
+}
+
 /** Drop unknown names and duplicates so stale session state cannot break scoring. */
 function normalizeState(state, heroes) {
   const clean = (list) => [...new Set((list || []).filter((n) => heroes.has(n)))];
+  const picksUs = clean(state.picksUs);
+  const picksThem = clean(state.picksThem);
   return {
     side: state.side === "red" ? "red" : "blue",
     bansUs: clean(state.bansUs),
     bansThem: clean(state.bansThem),
-    picksUs: clean(state.picksUs),
-    picksThem: clean(state.picksThem),
+    picksUs,
+    picksThem,
+    // Optional user-chosen lanes for picked heroes: { name: lane }.
+    lanesUs: cleanLaneChoices(state.lanesUs, picksUs),
+    lanesThem: cleanLaneChoices(state.lanesThem, picksThem),
   };
 }
 
@@ -78,7 +93,8 @@ export function createEngine(data) {
   const hasLaneData = (name) => Object.keys(heroes.get(name)?.lanes || {}).length > 0;
   /** Lanes a hero can play; unfilled heroes may play any lane. */
   const lanesOf = (name) => (hasLaneData(name) ? Object.keys(heroes.get(name).lanes) : LANES);
-  const laneLists = (names) => names.map(lanesOf);
+  /** Lane options of picked heroes; a user-chosen lane pins the hero to that lane. */
+  const laneLists = (names, choices = {}) => names.map((n) => (choices[n] ? [choices[n]] : lanesOf(n)));
 
   function tierValue(name, lane) {
     const tier = heroes.get(name)?.lanes?.[lane];
@@ -125,15 +141,18 @@ export function createEngine(data) {
 
   function openLanesOf(state) {
     const s = normalizeState(state, heroes);
-    return { us: openLanes(laneLists(s.picksUs)), them: openLanes(laneLists(s.picksThem)) };
+    return {
+      us: openLanes(laneLists(s.picksUs, s.lanesUs)),
+      them: openLanes(laneLists(s.picksThem, s.lanesThem)),
+    };
   }
 
   /** Pick suggestions for our next pick: every pickable hero, best first. */
   function pickSuggestions(rawState) {
     const state = normalizeState(rawState, heroes);
     const { picksUs: us, picksThem: them } = state;
-    const usLanes = laneLists(us);
-    const themLanes = laneLists(them);
+    const usLanes = laneLists(us, state.lanesUs);
+    const themLanes = laneLists(them, state.lanesThem);
     const enemyRemaining = Math.max(0, 5 - them.length);
     const w = settings;
 
@@ -240,6 +259,8 @@ export function createEngine(data) {
     getSynergy,
     lanesOf,
     hasLaneData,
+    /** Lane options for a team's picks, honouring user-chosen lanes. */
+    teamLaneLists: laneLists,
     tierValue,
     isPickable: (name, state) => isPickable(name, normalizeState(state, heroes)),
     openLanes: openLanesOf,

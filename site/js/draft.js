@@ -2,6 +2,8 @@
 // Pure functions (no DOM). Slots are stored by team colour, so switching
 // "our side" only changes the point of view, never the board contents.
 
+import { LANES } from "./matching.js";
+
 export const TEAMS = ["blue", "red"];
 export const SLOTS = 5;
 
@@ -20,7 +22,13 @@ export const SEQUENCE = [...BAN_ORDER, ...PICK_ORDER];
 
 export function emptyDraft() {
   const row = () => Array(SLOTS).fill(null);
-  return { bans: { blue: row(), red: row() }, picks: { blue: row(), red: row() } };
+  // lanes[team][i]: lane the user chose for picks[team][i]; null = automatic.
+  return { bans: { blue: row(), red: row() }, picks: { blue: row(), red: row() }, lanes: { blue: row(), red: row() } };
+}
+
+function cloneDraft(draft) {
+  const copy = (group) => ({ blue: [...group.blue], red: [...group.red] });
+  return { bans: copy(draft.bans), picks: copy(draft.picks), lanes: copy(draft.lanes) };
 }
 
 export const other = (team) => (team === "blue" ? "red" : "blue");
@@ -35,12 +43,24 @@ export function getSlot(draft, slot) {
 
 export function setSlot(draft, slot, name) {
   const key = slot.kind === "ban" ? "bans" : "picks";
-  const next = {
-    bans: { blue: [...draft.bans.blue], red: [...draft.bans.red] },
-    picks: { blue: [...draft.picks.blue], red: [...draft.picks.red] },
-  };
+  const next = cloneDraft(draft);
+  // A different hero (or clearing) resets the lane choice for that pick slot.
+  if (key === "picks" && next.picks[slot.team][slot.index] !== name) {
+    next.lanes[slot.team][slot.index] = null;
+  }
   next[key][slot.team][slot.index] = name;
   return next;
+}
+
+/** Choose a lane for a filled pick slot (null = automatic). */
+export function setLane(draft, team, index, lane) {
+  const next = cloneDraft(draft);
+  next.lanes[team][index] = next.picks[team][index] && LANES.includes(lane) ? lane : null;
+  return next;
+}
+
+export function getLane(draft, team, index) {
+  return draft.lanes[team][index];
 }
 
 export function nextEmptySlot(draft) {
@@ -55,6 +75,9 @@ export function pickTurn(team, index) {
 /** DraftState for the engine, seen from `side`. */
 export function engineState(draft, side) {
   const filled = (list) => list.filter(Boolean);
+  const choices = (team) => Object.fromEntries(
+    draft.picks[team].map((name, i) => [name, draft.lanes[team][i]]).filter(([name, lane]) => name && lane),
+  );
   const them = other(side);
   return {
     side,
@@ -62,6 +85,8 @@ export function engineState(draft, side) {
     bansThem: filled(draft.bans[them]),
     picksUs: filled(draft.picks[side]),
     picksThem: filled(draft.picks[them]),
+    lanesUs: choices(side),
+    lanesThem: choices(them),
   };
 }
 
@@ -101,6 +126,8 @@ export function sanitizeDraft(raw, heroNames) {
     if (typeof name === "string" && heroNames.has(name) && !seen.has(name)) {
       draft[key][slot.team][slot.index] = name;
       seen.add(name);
+      const lane = raw?.lanes?.[slot.team]?.[slot.index];
+      if (key === "picks" && LANES.includes(lane)) draft.lanes[slot.team][slot.index] = lane;
     }
   }
   return draft;

@@ -253,3 +253,55 @@ test("unknown names in state are ignored", () => {
   const r = e.pickSuggestions(state({ picksUs: ["不存在"], bansThem: ["也不存在"] }));
   assert.equal(r.suggestions.length, 4);
 });
+
+// ---------------------------------------------------------------- user-chosen lanes
+
+test("a chosen lane pins a picked hero for matching and open lanes", () => {
+  const e = createEngine({
+    heroes: [
+      hero("彈性", { 打野: "T0", 凱撒: "T1" }),
+      hero("打野候選", { 打野: "T1" }),
+      hero("凱撒候選", { 凱撒: "T1" }),
+    ],
+    counters: [], synergies: [], settings: {},
+  });
+  // Automatic: 彈性 can move, so both candidates still fit.
+  const auto = e.pickSuggestions(state({ picksUs: ["彈性"] }));
+  assert.deepEqual(auto.suggestions.map((s) => s.name).sort(), ["凱撒候選", "打野候選"]);
+  assert.deepEqual(auto.openLanes.us, ["凱撒", "打野", "中路", "魔龍", "輔助"]);
+
+  // User says 彈性 plays 打野: the jungle candidate now clashes.
+  const pinned = e.pickSuggestions(state({ picksUs: ["彈性"], lanesUs: { 彈性: "打野" } }));
+  assert.deepEqual(pinned.suggestions.map((s) => s.name), ["凱撒候選"]);
+  assert.deepEqual(pinned.openLanes.us, ["凱撒", "中路", "魔龍", "輔助"]);
+  assert.deepEqual(e.openLanes(state({ picksUs: ["彈性"], lanesUs: { 彈性: "打野" } })).us,
+    ["凱撒", "中路", "魔龍", "輔助"]);
+});
+
+test("a chosen lane may be outside the hero's usual lanes; invalid choices are ignored", () => {
+  const e = createEngine({
+    heroes: [hero("輔助王", { 輔助: "T0" }), hero("另一輔助", { 輔助: "T1" })],
+    counters: [], synergies: [], settings: {},
+  });
+  const offMeta = e.pickSuggestions(state({ picksUs: ["輔助王"], lanesUs: { 輔助王: "中路" } }));
+  assert.deepEqual(offMeta.suggestions.map((s) => s.name), ["另一輔助"]);
+  assert.deepEqual(offMeta.suggestions[0].lanes, ["輔助"]);
+
+  const bogus = e.openLanes(state({ picksUs: ["輔助王"], lanesUs: { 輔助王: "亂打", 沒選: "中路" } }));
+  assert.deepEqual(bogus.us, ["凱撒", "打野", "中路", "魔龍"]);
+});
+
+test("enemy lane choices narrow the threats that can still come", () => {
+  const e = createEngine({
+    heroes: [
+      hero("候選", { 中路: "T1" }), hero("剋星", { 打野: null }),
+      hero("敵", { 打野: null, 凱撒: null }),
+    ],
+    counters: [["剋星", "候選", 1]],
+    synergies: [], settings: {},
+  });
+  const risk = (lanesThem) => find(e.pickSuggestions(state({ picksThem: ["敵"], lanesThem })), "候選")
+    .cons.some((c) => c.text.includes("剋星"));
+  assert.equal(risk({}), true, "敵 could move to 凱撒, so 剋星 can still jungle");
+  assert.equal(risk({ 敵: "打野" }), false, "敵 pinned to 打野: 剋星 has no lane left");
+});

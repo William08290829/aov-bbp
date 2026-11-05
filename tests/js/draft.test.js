@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { createEngine } from "../../site/js/engine.js";
 import {
   BAN_ORDER, PICK_ORDER, emptyDraft, engineState, fillError, nextEmptySlot, pickTurn,
-  sanitizeDraft, sanitizeSlot, setSlot, slotLabel,
+  sanitizeDraft, sanitizeSlot, setLane, setSlot, slotLabel,
 } from "../../site/js/draft.js";
 
 const hero = (name, extra = {}) => ({
@@ -51,8 +51,15 @@ test("engineState is seen from our side", () => {
   d = setSlot(d, { kind: "pick", team: "blue", index: 0 }, "甲");
   d = setSlot(d, { kind: "pick", team: "red", index: 0 }, "乙");
   d = setSlot(d, { kind: "ban", team: "red", index: 2 }, "丙");
-  assert.deepEqual(engineState(d, "blue"), { side: "blue", bansUs: [], bansThem: ["丙"], picksUs: ["甲"], picksThem: ["乙"] });
-  assert.deepEqual(engineState(d, "red"), { side: "red", bansUs: ["丙"], bansThem: [], picksUs: ["乙"], picksThem: ["甲"] });
+  d = setLane(d, "blue", 0, "打野");
+  assert.deepEqual(engineState(d, "blue"), {
+    side: "blue", bansUs: [], bansThem: ["丙"], picksUs: ["甲"], picksThem: ["乙"],
+    lanesUs: { 甲: "打野" }, lanesThem: {},
+  });
+  assert.deepEqual(engineState(d, "red"), {
+    side: "red", bansUs: ["丙"], bansThem: [], picksUs: ["乙"], picksThem: ["甲"],
+    lanesUs: {}, lanesThem: { 甲: "打野" },
+  });
 });
 
 test("fillError: duplicates, form groups, and replacing a slot", () => {
@@ -93,4 +100,29 @@ test("sanitizeDraft drops unknown and duplicate names; sanitizeSlot validates", 
   assert.equal(sanitizeSlot({ kind: "pick", team: "red", index: 5 }), null);
   assert.equal(sanitizeSlot({ kind: "x", team: "red", index: 0 }), null);
   assert.equal(sanitizeSlot(undefined), null);
+});
+
+test("lane choice: only on filled picks, reset when the hero changes, kept otherwise", () => {
+  const slot = { kind: "pick", team: "blue", index: 0 };
+  let d = setLane(emptyDraft(), "blue", 0, "中路");
+  assert.equal(d.lanes.blue[0], null, "empty slot cannot have a lane");
+  d = setSlot(d, slot, "甲");
+  d = setLane(d, "blue", 0, "中路");
+  assert.equal(d.lanes.blue[0], "中路");
+  assert.equal(setLane(d, "blue", 0, "不是分路").lanes.blue[0], null);
+  assert.equal(setSlot(d, slot, "甲").lanes.blue[0], "中路", "same hero keeps its lane");
+  assert.equal(setSlot(d, slot, "乙").lanes.blue[0], null, "new hero resets the lane");
+  assert.equal(setSlot(d, slot, null).lanes.blue[0], null, "clearing resets the lane");
+  // Bans never touch lane choices.
+  assert.equal(setSlot(d, { kind: "ban", team: "blue", index: 0 }, "丙").lanes.blue[0], "中路");
+});
+
+test("sanitizeDraft keeps valid lane choices only for kept picks", () => {
+  const raw = {
+    picks: { blue: ["甲", "不存在", "乙"], red: [] },
+    lanes: { blue: ["打野", "中路", "亂打"], red: ["魔龍"] },
+  };
+  const d = sanitizeDraft(raw, engine.heroes);
+  assert.deepEqual(d.lanes.blue, ["打野", null, null, null, null]);
+  assert.deepEqual(d.lanes.red, [null, null, null, null, null]);
 });

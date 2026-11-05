@@ -1,9 +1,9 @@
 // Draft page UI: loads data.json, keeps board state, renders suggestions.
 import { createEngine } from "./engine.js";
-import { LANES, assignLanes } from "./matching.js";
+import { LANES, assignLanes, feasible } from "./matching.js";
 import {
   SLOTS, emptyDraft, engineState, fillError, getSlot, nextEmptySlot, other,
-  sameSlot, sanitizeDraft, sanitizeSlot, setSlot, slotLabel,
+  sameSlot, sanitizeDraft, sanitizeSlot, setLane, setSlot, slotLabel,
 } from "./draft.js";
 
 const CLASSES = ["坦克", "戰士", "刺客", "法師", "射手", "輔助"];
@@ -185,7 +185,7 @@ function renderTop(active) {
   $("active-hint").textContent = active ? `目前：${slotLabel(active, ui.side)}` : "點選任一格可更換";
 }
 
-function slotHtml(slot, active, inner, extraClass) {
+function slotHtml(slot, active, inner, extraClass, after = "") {
   const name = getSlot(ui.draft, slot);
   const isActive = sameSlot(slot, active);
   const label = slotLabel(slot, ui.side);
@@ -195,6 +195,7 @@ function slotHtml(slot, active, inner, extraClass) {
               aria-label="${esc(label)}${name ? `：${esc(name)}` : "：空"}"${isActive ? ' aria-current="true"' : ""}>
         ${inner}
       </button>
+      ${after}
       ${name ? `<button type="button" class="slot-clear" data-clear="${slotKey(slot)}" aria-label="清除${esc(label)}">×</button>` : ""}
     </div>`;
 }
@@ -213,13 +214,40 @@ function renderBans(active) {
   }
 }
 
+function laneOptionLabel(name, lane, takenBy) {
+  const lanes = hero(name).lanes || {};
+  let label = lane;
+  if (lane in lanes) label += ` · ${lanes[lane] || "未評"}`;
+  else if (engine.hasLaneData(name)) label += " · 非常規";
+  if (takenBy) label += `（已指定給 ${takenBy}）`;
+  return label;
+}
+
+function laneSelectHtml(team, index, name, chosen, auto) {
+  const takenBy = new Map();
+  ui.draft.picks[team].forEach((other, i) => {
+    const lane = ui.draft.lanes[team][i];
+    if (other && lane && i !== index) takenBy.set(lane, other);
+  });
+  const options = [
+    `<option value="">自動（${esc(auto || "無法分配")}）</option>`,
+    ...LANES.map((l) => `<option value="${l}"${l === chosen ? " selected" : ""}>${esc(laneOptionLabel(name, l, takenBy.get(l)))}</option>`),
+  ];
+  return `<select class="lane-select${chosen ? " chosen" : ""}" data-lane-slot="${team}:${index}"
+            aria-label="${esc(name)} 的分路">${options.join("")}</select>`;
+}
+
 function renderTeam(who, team, active, openLanes) {
   const el = $(`team-${who}`);
   el.className = `team team-${who} team-${team}`;
   const names = ui.draft.picks[team];
+  const chosen = ui.draft.lanes[team];
   const filled = names.map((n, i) => [n, i]).filter(([n]) => n);
-  const lanes = assignLanes(filled.map(([n]) => (engine.hasLaneData(n) ? engine.lanesOf(n) : [])));
-  const laneOf = new Map(filled.map(([n], k) => [n, engine.hasLaneData(n) ? lanes[k] : null]));
+  const choices = Object.fromEntries(filled.map(([n, i]) => [n, chosen[i]]).filter(([, l]) => l));
+  const laneLists = engine.teamLaneLists(filled.map(([n]) => n), choices);
+  const assigned = assignLanes(laneLists);
+  const autoLane = new Map(filled.map(([n], k) => [n, assigned[k]]));
+  const clash = !feasible(laneLists);
 
   const title = `${who === "us" ? "我方" : "敵方"}（${team === "blue" ? "藍" : "紅"}）`;
   const openText = openLanes.length ? openLanes.join("、") : "—";
@@ -227,19 +255,28 @@ function renderTeam(who, team, active, openLanes) {
     const slot = { kind: "pick", team, index };
     const name = names[index];
     const h = name && hero(name);
-    const lane = name ? (laneOf.get(name) || (engine.hasLaneData(name) ? "撞路" : "分路未填")) : "";
+    const auto = name ? autoLane.get(name) : null;
+    let laneTag = "";
+    let after = "";
+    if (name && who === "us") {
+      after = laneSelectHtml(team, index, name, chosen[index], auto);
+    } else if (name) {
+      const shown = chosen[index] || auto || "無法分配";
+      laneTag = `<span class="pick-lane">${esc(shown)}${!chosen[index] && !engine.hasLaneData(name) ? "（分路未填）" : ""}</span>`;
+    }
     const inner = `
       ${h ? avatar(h, "av-pick") : '<span class="av av-empty" aria-hidden="true"></span>'}
       <span class="pick-text">
         <span class="pick-name">${h ? esc(name) : "點此填入"}</span>
         <span class="pick-sub">${esc(slotLabel(slot, ui.side))}</span>
-        ${lane ? `<span class="pick-lane">${esc(lane)}</span>` : ""}
+        ${laneTag}
       </span>`;
-    return slotHtml(slot, active, inner, "pick-slot");
+    return slotHtml(slot, active, inner, `pick-slot${after ? " has-lane-select" : ""}`, after);
   });
   el.innerHTML = `
     <div class="team-head"><span class="team-title">${title}</span>
-      <span class="team-open" title="仍可補的分路">可補：${esc(openText)}</span></div>
+      <span class="team-open" title="仍可補的分路">可補：${esc(openText)}</span>
+      ${clash ? '<span class="team-warn" role="alert">⚠ 分路衝突：有英雄無法分配到不同分路</span>' : ""}</div>
     ${rows.join("")}`;
 }
 
@@ -369,6 +406,14 @@ function bind() {
       ui.expanded.clear();
       return update();
     }
+  });
+
+  document.addEventListener("change", (e) => {
+    const select = e.target.closest("select.lane-select");
+    if (!select) return;
+    const [team, index] = select.dataset.laneSlot.split(":");
+    ui.draft = setLane(ui.draft, team, Number(index), select.value || null);
+    update();
   });
 
   $("search").addEventListener("input", (e) => {
