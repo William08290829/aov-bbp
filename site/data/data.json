@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-11-05T03:01:31+08:00",
+  "exported_at": "2026-11-05T21:02:31+08:00",
   "heroes": [
     {"name": "亞連", "main_class": "戰士", "sub_class": null, "avatar": null, "form_group": null, "lanes": {"凱撒": "T2"}},
     {"name": "亥犽", "main_class": "射手", "sub_class": null, "avatar": null, "form_group": null, "lanes": {"魔龍": "T1"}},
@@ -44,7 +44,7 @@
     {"name": "希露卡", "main_class": "射手", "sub_class": null, "avatar": null, "form_group": null, "lanes": {"魔龍": "T2"}},
     {"name": "弗洛倫", "main_class": "戰士", "sub_class": null, "avatar": null, "form_group": null, "lanes": {"凱撒": "T0"}},
     {"name": "悟空", "main_class": "刺客", "sub_class": null, "avatar": null, "form_group": null, "lanes": {}},
-    {"name": "愛里", "main_class": "刺客", "sub_class": "戰士", "avatar": null, "form_group": null, "lanes": {}},
+    {"name": "愛里", "main_class": "刺客", "sub_class": "戰士", "avatar": null, "form_group": null, "lanes": {"凱撒": "T0", "打野": "T2"}},
     {"name": "愛麗絲", "main_class": "法師", "sub_class": "輔助", "avatar": null, "form_group": null, "lanes": {}},
     {"name": "拉維爾", "main_class": "射手", "sub_class": null, "avatar": null, "form_group": null, "lanes": {"魔龍": "T2"}},
     {"name": "拉茲", "main_class": "法師", "sub_class": "刺客", "avatar": null, "form_group": null, "lanes": {"中路": "T1"}},

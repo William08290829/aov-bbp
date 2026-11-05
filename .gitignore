@@ -11,3 +11,6 @@ __pycache__/
 # Editors / OS
 .vscode/
 .DS_Store
+
+#
+note.md
