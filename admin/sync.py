@@ -116,7 +116,26 @@ def dumps_data(data: dict) -> str:
     return "{\n" + ",\n".join(parts) + "\n}\n"
 
 
-def export_to_disk(session: Session, path: Path | None = None) -> dict:
+@dataclass
+class ExportResult:
+    data: dict
+    changed: bool  # False when data.json already had identical content
+
+    @property
+    def summary(self) -> dict:
+        return summarize(self.data)
+
+
+def summarize(data: dict) -> dict:
+    return {
+        "heroes": len(data["heroes"]),
+        "counters": len(data["counters"]),
+        "synergies": len(data["synergies"]),
+        "exported_at": data.get("exported_at"),
+    }
+
+
+def export_to_disk(session: Session, path: Path | None = None) -> ExportResult:
     path = path or db.DATA_JSON
     data = build_data(session)
     if _same_content(path, data):
@@ -124,7 +143,8 @@ def export_to_disk(session: Session, path: Path | None = None) -> dict:
         _set_hash(session, _sha256(path.read_bytes()))
         session.commit()
         status.last_stat = _stat(path)
-        return data
+        data["exported_at"] = json.loads(path.read_text(encoding="utf-8")).get("exported_at")
+        return ExportResult(data, changed=False)
     raw = dumps_data(data).encode("utf-8")
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
@@ -133,7 +153,31 @@ def export_to_disk(session: Session, path: Path | None = None) -> dict:
     _set_hash(session, _sha256(raw))
     session.commit()
     status.last_stat = _stat(path)
-    return data
+    return ExportResult(data, changed=True)
+
+
+def export_now(session: Session) -> ExportResult:
+    """Manual export (CLI / admin button): pick up external changes first, then write.
+
+    Checking first means a stale database can never overwrite a newer data.json
+    (e.g. one that just arrived via git pull).
+    """
+    existed = db.DATA_JSON.exists()
+    check(session)  # also creates data.json when it is missing
+    result = export_to_disk(session)
+    result.changed = result.changed or not existed
+    return result
+
+
+def restore_from(session: Session, source: Path) -> ExportResult:
+    """Rebuild the database from `source`, then write it out as data.json.
+
+    Raises SyncError if `source` is not a valid data file; nothing is changed then.
+    """
+    data = parse_data(source.read_bytes())
+    import_data(session, data)
+    session.commit()
+    return export_to_disk(session)
 
 
 def _same_content(path: Path, data: dict) -> bool:

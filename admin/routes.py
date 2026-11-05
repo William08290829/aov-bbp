@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 from urllib.parse import quote
 
@@ -7,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session
 
 from admin import db, repo, sync
-from admin.models import HERO_CLASSES, LANES, TIERS, Hero
+from admin.models import DEFAULT_SETTINGS, HERO_CLASSES, LANES, SETTING_INFO, TIERS, Hero
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
@@ -81,7 +82,7 @@ def is_htmx(request: Request) -> bool:
 
 
 def render(request: Request, name: str, ctx: dict, *, trigger: str | None = None, status_code: int = 200):
-    if name == "index.html":
+    if not name.startswith("_"):  # full page: show sync banners
         ctx = {**ctx, "sync_status": sync.status, "imported_notice": sync.status.imported_notice}
         sync.status.imported_notice = False
     resp = templates.TemplateResponse(request, name, ctx, status_code=status_code)
@@ -296,3 +297,84 @@ def cycle_synergy(hero_id: int, other_id: int, request: Request, session: Sessio
     repo.set_synergy(session, hero_id, other_id, value)
     save(session)
     return _rel_response(request, session, hero_id, other_id)
+
+
+# ---------------------------------------------------------------- settings
+
+
+def setting_rows(session: Session) -> dict[str, list[dict]]:
+    values = repo.get_settings(session)
+    groups: dict[str, list[dict]] = {}
+    for key, (group, label, help_text) in SETTING_INFO.items():
+        groups.setdefault(group, []).append({
+            "key": key,
+            "label": label,
+            "help": help_text,
+            "value": values.get(key, DEFAULT_SETTINGS[key]),
+            "default": DEFAULT_SETTINGS[key],
+        })
+    return groups
+
+
+@router.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request, session: Session = SessionDep):
+    return render(request, "settings.html", {"nav": "settings", "groups": setting_rows(session)})
+
+
+@router.post("/settings/reset", response_class=HTMLResponse)
+def settings_reset(request: Request, session: Session = SessionDep):
+    repo.reset_settings(session)
+    save(session)
+    return render(request, "_settings_form.html",
+                  {"groups": setting_rows(session), "message": "已恢復所有預設值"})
+
+
+@router.post("/settings/{key}", response_class=HTMLResponse)
+def settings_update(key: str, request: Request, value: str = Form(""), session: Session = SessionDep):
+    repo.set_setting(session, key, value)
+    save(session)
+    row = next(r for rows in setting_rows(session).values() for r in rows if r["key"] == key)
+    return render(request, "_setting_row.html", {"row": row, "saved": True})
+
+
+# ---------------------------------------------------------------- export
+
+
+def git_status() -> dict | None:
+    """Uncommitted / unpushed changes under site/ (read-only); None if git is unavailable."""
+    try:
+        out = subprocess.run(
+            ["git", "status", "--porcelain=v1", "-b", "--", "site"],
+            cwd=db.ROOT, capture_output=True, text=True, timeout=5, check=True,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = out.splitlines()
+    branch = lines[0][3:] if lines and lines[0].startswith("## ") else ""
+    ahead = 0
+    if "[ahead " in branch:
+        ahead = int(branch.split("[ahead ", 1)[1].split("]")[0].split(",")[0])
+    files = [line[3:].strip('"') for line in lines[1:]]
+    name = branch.split("...", 1)[0].split(" ", 1)[0]
+    return {"files": files, "ahead": ahead, "has_upstream": "..." in branch, "branch": name}
+
+
+def export_ctx(result: sync.ExportResult | None = None) -> dict:
+    summary = result.summary if result else None
+    if summary is None:
+        try:
+            summary = sync.summarize(sync.parse_data(db.DATA_JSON.read_bytes()))
+        except (OSError, sync.SyncError):
+            summary = None
+    return {"summary": summary, "result": result, "git": git_status()}
+
+
+@router.get("/export", response_class=HTMLResponse)
+def export_page(request: Request, session: Session = SessionDep):
+    return render(request, "export.html", {"nav": "export", **export_ctx()})
+
+
+@router.post("/export", response_class=HTMLResponse)
+def export_run(request: Request, session: Session = SessionDep):
+    result = sync.export_now(session)
+    return render(request, "_export_panel.html", export_ctx(result))

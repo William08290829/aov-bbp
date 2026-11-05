@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="page">
+  <h1>匯出</h1>
+  <p class="hint">後台每次修改都會自動寫入 <code>site/data/data.json</code>。這裡的按鈕會再檢查一次並匯出（與 <code>python scripts/export_data.py</code> 相同），並顯示尚未 commit／push 的變更。</p>
+  <div id="export-panel">{% include "_export_panel.html" %}</div>
+</main>
+{% endblock %}

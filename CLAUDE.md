@@ -24,7 +24,7 @@
 
 兩者之間唯一的連結是 `site/data/data.json`：後台把資料庫匯出成這個檔案，選角頁讀取它。
 
-**更新流程**：在本機後台改完所有資料 → 執行匯出 → commit 並 push → GitHub Actions 自動部署。
+**更新流程**：在本機後台改資料（每次修改自動寫入 `data.json`）→ commit 並 push → GitHub Actions 自動部署。
 
 ### 重要限制
 
@@ -66,6 +66,8 @@ scripts/
   import_data.py             site/data/data.json → 資料庫（還原用）
 tests/
   test_repo.py               pytest：後台資料邏輯
+  test_admin.py              pytest：後台頁面與 HTMX 端點
+  test_stage2.py             pytest：匯出／匯入腳本、設定頁、匯出頁
   js/                        node --test：推薦引擎
 .github/workflows/deploy.yml
 requirements.txt
@@ -89,8 +91,11 @@ python scripts/fetch_avatars.py         # 選用
 uvicorn admin.main:app --reload
 # → http://127.0.0.1:8000/admin
 
-# 匯出資料給選角頁
+# 匯出資料給選角頁（後台已自動匯出，這個指令主要用來確認；會先讀入外部變更，不會蓋掉較新的 data.json）
 python scripts/export_data.py
+
+# 從檔案還原資料庫（一般不需要；後台會自動匯入 git pull 帶來的 data.json）
+python scripts/import_data.py [backup.json] [--reset] [--yes]
 
 # 本機預覽選角頁（ES modules 不能用 file:// 開啟，必須透過 HTTP）
 python -m http.server 8080 --directory site
@@ -561,6 +566,14 @@ jobs:
 - **`form_group` 完全由名稱決定，不可手動輸入**：名稱為 `名稱(型態)` 時 `form_group` = 括號前的名稱，否則為 `None`。匯入、新增、改名時都由 `repo.py` 統一計算；後台只唯讀顯示。
 - **權重預設值**：後台每次啟動時檢查 `Setting`，缺少的 key 補上預設值，已存在的不動。
 - **主職業為空時「標記為已確認」不可點**，並提示先補主職業。
+
+### 第 2 階段（匯出／匯入、設定、匯出頁）
+
+- **`export_data.py` 與後台「立即匯出」共用 `sync.export_now`**：先執行同步檢查（若 `data.json` 被外部改動就先匯入），再匯出；內容沒變時不重寫檔案。
+- **`import_data.py`**：預設從 `site/data/data.json` 重建；可指定其他檔案還原，此時同時覆寫 `site/data/data.json`。執行前顯示內容摘要並要求輸入 `y`（`--yes` 略過）。預設保留既有英雄的 id（後台開著也不受影響）；`--reset` 會刪除並重建所有資料表，需先停止後台。
+- **設定頁**：每個欄位變更即時存檔（HTMX），數值限制在 −100 ~ 100，顯示預設值與「已修改」標記，提供「恢復預設值」（需確認）。
+- **匯出頁**：顯示 `data.json` 的英雄數、剋制／搭配筆數、資料時間，以及 `site/` 底下尚未 commit 的檔案與尚未 push 的 commit（唯讀執行 `git status`），並附上建議指令。
+- 後台頁首加入「英雄／設定／匯出」導覽。
 
 ### 之後階段
 

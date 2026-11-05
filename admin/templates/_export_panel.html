@@ -1,0 +1,41 @@
+<section class="card">
+  <h2>data.json</h2>
+  {% if summary %}
+  <dl class="stats wide">
+    <div><dt>英雄</dt><dd>{{ summary.heroes }} 隻</dd></div>
+    <div><dt>剋制</dt><dd>{{ summary.counters }} 筆</dd></div>
+    <div><dt>搭配</dt><dd>{{ summary.synergies }} 筆</dd></div>
+    <div><dt>資料時間</dt><dd>{{ summary.exported_at }}</dd></div>
+  </dl>
+  {% else %}
+  <p class="muted">尚未產生 data.json。</p>
+  {% endif %}
+  <div class="row actions">
+    <button class="btn primary" hx-post="/admin/export" hx-target="#export-panel">立即匯出</button>
+    {% if result %}
+    <span class="saved" role="status">✓ {{ "已匯出" if result.changed else "已是最新，內容沒有變更" }}</span>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>Git 狀態（site/）</h2>
+  {% if git is none %}
+  <p class="muted">無法讀取 git 狀態。</p>
+  {% else %}
+    {% if git.files %}
+    <p><strong>有 {{ git.files | length }} 個檔案尚未 commit：</strong></p>
+    <ul class="file-list">{% for f in git.files %}<li><code>{{ f }}</code></li>{% endfor %}</ul>
+    {% else %}
+    <p>site/ 沒有尚未 commit 的變更。</p>
+    {% endif %}
+    {% if git.ahead %}<p><strong>有 {{ git.ahead }} 個 commit 尚未 push。</strong></p>
+    {% elif not git.has_upstream %}<p class="muted">目前分支尚未設定遠端（upstream），第一次 push 時需要加上 <code>-u origin {{ git.branch or "main" }}</code>；若還沒有遠端，請先 <code>git remote add origin &lt;repo網址&gt;</code>。</p>{% endif %}
+    {% if git.files or git.ahead or not git.has_upstream %}
+    <p class="hint">記得 commit 並 push：</p>
+    <pre class="cmd">{% if git.files %}git add site/
+git commit -m "Update hero data"
+{% endif %}{% if git.has_upstream %}git push{% else %}git push -u origin {{ git.branch or "main" }}{% endif %}</pre>
+    {% endif %}
+  {% endif %}
+</section>

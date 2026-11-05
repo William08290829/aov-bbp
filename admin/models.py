@@ -39,6 +39,22 @@ DEFAULT_SETTINGS: dict[str, float] = {
 }
 
 
+# key -> (group, label, help); order here is the order on the settings page.
+SETTING_INFO: dict[str, tuple[str, str, str]] = {
+    "w_tier": ("選角權重", "tier", "英雄在可補分路中的最高 tier 分數乘上這個權重"),
+    "w_counter": ("選角權重", "剋制對方", "剋制對方已選英雄（每隻分別計算）"),
+    "w_synergy": ("選角權重", "我方搭配", "與我方已選英雄好搭（每隻分別計算）"),
+    "w_risk": ("選角權重", "被反制風險（扣分）", "對方還能選來反制的英雄；對方剩越多手，影響越大"),
+    "w_deny": ("選角權重", "搶角價值", "搶走對方能用來剋制我方已選英雄的角色"),
+    "w_ban_threat": ("禁用權重", "對我方的威脅", "禁用時：該英雄剋制我方已選英雄的程度"),
+    "tier_T0": ("tier 分數", "T0", ""),
+    "tier_T1": ("tier 分數", "T1", ""),
+    "tier_T2": ("tier 分數", "T2", ""),
+    "tier_none": ("tier 分數", "未評", "有勾選分路但未評 tier，或分路資料未填"),
+}
+assert SETTING_INFO.keys() == DEFAULT_SETTINGS.keys()
+
+
 def _in(column: str, values: list[str]) -> str:
     return f"{column} IN ({', '.join(repr(v) for v in values)})"
 

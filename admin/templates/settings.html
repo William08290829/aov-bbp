@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="page">
+  <h1>設定</h1>
+  <p class="hint">推薦引擎使用的權重與 tier 分數。修改後立即存檔並寫入 <code>data.json</code>，選角頁重新載入資料後生效。</p>
+  <div id="settings-form">{% include "_settings_form.html" %}</div>
+</main>
+{% endblock %}

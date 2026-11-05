@@ -4,6 +4,7 @@ Functions here flush but never commit; callers own the transaction.
 Counter / synergy sign and ordering rules live only here.
 """
 
+import math
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -361,6 +362,33 @@ def ensure_default_settings(session: Session) -> None:
 
 def get_settings(session: Session) -> dict[str, float]:
     return {s.key: s.value for s in session.exec(select(Setting)).all()}
+
+
+SETTING_LIMIT = 100.0
+
+
+def set_setting(session: Session, key: str, raw: str | float) -> float:
+    if key not in DEFAULT_SETTINGS:
+        raise RepoError(f"未知的設定：{key}")
+    try:
+        value = float(str(raw).strip())
+    except ValueError:
+        raise RepoError("請輸入數字") from None
+    if not math.isfinite(value) or abs(value) > SETTING_LIMIT:
+        raise RepoError(f"數值必須介於 -{SETTING_LIMIT:g} 到 {SETTING_LIMIT:g} 之間")
+    row = session.get(Setting, key) or Setting(key=key, value=value)
+    row.value = value
+    session.add(row)
+    session.flush()
+    return value
+
+
+def reset_settings(session: Session) -> None:
+    for key, value in DEFAULT_SETTINGS.items():
+        row = session.get(Setting, key) or Setting(key=key, value=float(value))
+        row.value = float(value)
+        session.add(row)
+    session.flush()
 
 
 # ---------------------------------------------------------------- stats

@@ -11,6 +11,11 @@
 <body>
   <header class="topbar">
     <a class="brand" href="/admin">BBP 後台</a>
+    <nav class="topnav">
+      <a href="/admin"{% if nav is not defined or nav == "heroes" %} aria-current="page"{% endif %}>英雄</a>
+      <a href="/admin/settings"{% if nav == "settings" %} aria-current="page"{% endif %}>設定</a>
+      <a href="/admin/export"{% if nav == "export" %} aria-current="page"{% endif %}>匯出</a>
+    </nav>
     <span class="topbar-note">修改會自動存入 <code>site/data/data.json</code>，完成後記得 commit 並 push。</span>
   </header>
   {% if sync_status.error %}

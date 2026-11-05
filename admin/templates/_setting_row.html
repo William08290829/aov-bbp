@@ -1,0 +1,14 @@
+<form class="setting-row" id="setting-{{ row.key }}" hx-post="/admin/settings/{{ row.key }}"
+      hx-target="this" hx-swap="outerHTML" hx-trigger="change">
+  <label for="input-{{ row.key }}" class="setting-label">{{ row.label }}
+    <code class="setting-key">{{ row.key }}</code>
+  </label>
+  <input class="input setting-input" id="input-{{ row.key }}" name="value" type="number" step="0.1"
+         min="-100" max="100" required value="{{ '%g' % row.value }}">
+  <span class="setting-meta">
+    {%- if row.value != row.default %}<span class="tag tag-warn">已修改</span> {% endif -%}
+    預設 {{ '%g' % row.default }}
+    {%- if saved %} <span class="saved inline" role="status">✓ 已儲存</span>{% endif -%}
+  </span>
+  {% if row.help %}<p class="hint setting-help">{{ row.help }}</p>{% endif %}
+</form>
