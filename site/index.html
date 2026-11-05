@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Best Ban &amp; Pick</title>
+  <meta name="description" content="傳說對決選角建議工具：禁用與選角推薦。非官方粉絲作品。">
+  <link rel="stylesheet" href="./css/style.css">
+  <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-full">Best Ban &amp; Pick</span><span class="brand-short">BBP</span></div>
+      <div class="bans bans-us" id="bans-us" aria-label="我方禁用"></div>
+      <div class="controls">
+        <div class="side-toggle" role="group" aria-label="我方陣營">
+          <button type="button" class="side-btn blue" data-side="blue">藍方（首搶）</button>
+          <button type="button" class="side-btn red" data-side="red">紅方</button>
+        </div>
+        <div class="status">
+          <span class="phase" id="phase"></span>
+          <span class="active-hint" id="active-hint"></span>
+        </div>
+        <button type="button" class="btn-clear" id="btn-clear">清空</button>
+      </div>
+      <div class="bans bans-them" id="bans-them" aria-label="敵方禁用"></div>
+    </header>
+
+    <main class="board">
+      <aside class="team team-us" id="team-us" aria-label="我方選角"></aside>
+
+      <section class="middle">
+        <div class="filters">
+          <div class="class-tabs" id="class-tabs" role="tablist" aria-label="職業"></div>
+          <div class="filter-inputs">
+            <select id="lane-filter" aria-label="分路篩選"></select>
+            <input id="search" type="search" placeholder="搜尋英雄" autocomplete="off" aria-label="搜尋英雄">
+          </div>
+        </div>
+        <div class="panes">
+          <section class="pane pane-suggest" aria-labelledby="suggest-title">
+            <div class="pane-head">
+              <h2 id="suggest-title">選角建議</h2>
+              <span class="pane-meta" id="suggest-count"></span>
+            </div>
+            <ol class="suggest-list" id="suggest-list"></ol>
+          </section>
+          <section class="pane pane-grid" aria-labelledby="grid-title">
+            <div class="pane-head">
+              <h2 id="grid-title">英雄</h2>
+              <div class="sort-toggle" role="group" aria-label="排序">
+                <button type="button" data-sort="score">推薦排序</button>
+                <button type="button" data-sort="default">預設</button>
+              </div>
+            </div>
+            <div class="hero-grid" id="hero-grid"></div>
+          </section>
+        </div>
+      </section>
+
+      <aside class="team team-them" id="team-them" aria-label="敵方選角"></aside>
+    </main>
+
+    <footer class="footer">
+      <span id="data-time"></span>
+      <span>本工具為非官方粉絲作品，與 Garena 無關；英雄頭像與名稱版權屬於 Garena。</span>
+    </footer>
+  </div>
+
+  <div class="load-error" id="load-error" hidden role="alert"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><p class="load-error">此頁面需要啟用 JavaScript。</p></noscript>
+</body>
+</html>
