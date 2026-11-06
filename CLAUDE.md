@@ -70,7 +70,8 @@ tests/
   test_admin.py              pytest：後台頁面與 HTMX 端點
   test_stage2.py             pytest：匯出／匯入腳本、設定頁、匯出頁
   js/                        node --test：推薦引擎與選角格子邏輯（*.test.js）
-.github/workflows/deploy.yml
+.github/workflows/deploy.yml   push 到 main 時部署 site/ 到 GitHub Pages
+.github/workflows/test.yml     push / pull request 時跑 pytest 與 node --test
 requirements.txt
 package.json                 沒有任何相依套件，只宣告 "type": "module" 讓 Node 以 ES module 載入 site/js
 pytest.ini
@@ -614,6 +615,13 @@ jobs:
 - **下載**：每次請求間隔 1.5 秒（`--delay`），已有頭像的英雄跳過（`--force` 重新下載），`--only` 可指定英雄。圖片格式以檔案內容判斷（jpg / png / webp），透過 `repo.save_avatar` 存檔，最後更新 `data.json`。
 - **列表頁圖片不是 jpg / png / webp 時**（例如凱格路士是 GIF），改抓英雄介紹頁上的 `*head.jpg` 圖示。
 - 送出的請求使用一般的瀏覽器識別字串，不附任何個人資訊。
+
+### 第 6 階段（GitHub Actions）
+
+- **`deploy.yml`** 照規格原文：push 到 `main`（或手動 `workflow_dispatch`）時，把 `site/` 整個資料夾發佈到 GitHub Pages，不需要建置步驟。
+- **`test.yml`**：push 與 pull request 時分成兩個 job 平行執行——Python 3.10（與本機相同）跑 `pytest -q`；Node 24 跑 `node --test tests/js/*.test.js`。
+- 部署**不等待**測試結果（規格兩個 workflow 互相獨立）；測試失敗時會在 GitHub 上顯示紅色 ✗，但網站仍會更新。
+- **GitHub 設定**（只需一次）：repo → Settings → Pages → Build and deployment → Source 選 **GitHub Actions**。網址為 `https://william08290829.github.io/aov-bbp/`。
 
 ### 之後階段
 
