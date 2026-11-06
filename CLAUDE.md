@@ -516,11 +516,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/checkout@v7
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
-      - uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v5
         id: deployment
 ```
 
@@ -618,7 +618,8 @@ jobs:
 
 ### 第 6 階段（GitHub Actions）
 
-- **`deploy.yml`** 照規格原文：push 到 `main`（或手動 `workflow_dispatch`）時，把 `site/` 整個資料夾發佈到 GitHub Pages，不需要建置步驟。
+- **action 版本**：一律使用原生 Node 24 的版本（`checkout@v7`、`upload-pages-artifact@v5`、`deploy-pages@v5`、`setup-python@v7`、`setup-node@v7`），避免 GitHub 的 Node 20 淘汰警告。
+- **`deploy.yml`** 照規格（除 action 版本外）：push 到 `main`（或手動 `workflow_dispatch`）時，把 `site/` 整個資料夾發佈到 GitHub Pages，不需要建置步驟。
 - **`test.yml`**：push 與 pull request 時分成兩個 job 平行執行——Python 3.10（與本機相同）跑 `pytest -q`；Node 24 跑 `node --test tests/js/*.test.js`。
 - 部署**不等待**測試結果（規格兩個 workflow 互相獨立）；測試失敗時會在 GitHub 上顯示紅色 ✗，但網站仍會更新。
 - **GitHub 設定**（只需一次）：repo → Settings → Pages → Build and deployment → Source 選 **GitHub Actions**。網址為 `https://william08290829.github.io/aov-bbp/`。
