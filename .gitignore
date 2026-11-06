@@ -14,3 +14,5 @@ __pycache__/
 
 #
 note.md
+# fetch_avatars.py cache
+data/.cache/

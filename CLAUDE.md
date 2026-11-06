@@ -606,6 +606,14 @@ jobs:
 - **清空**需要確認。所有格子填滿後，點英雄會提示先點選要更換的格子。
 - 配色為深色主題；藍方 `#3d7ef0`、紅方 `#e0524f`、作用中格子與前 3 名為金色。
 
+### 第 5 階段（頭像）
+
+- **`fetch_avatars.py` 分三個子指令**：`check`（抓列表頁、驗證 selector，結果快取在 `data/.cache/vn_heroes.json`，不進 git）、`map`（比對 `name_map.csv`，不連網）、`download`（只下載 `confidence` 為「高」的對照）。只用 Python 標準函式庫解析 HTML。
+- **對照表**：130 筆全部確認為「高」。新補的 19 筆是比對台服官網（moba.garena.tw）英雄頁的技能描述得出；布萊恩＝Edras（vn_id `11596`）、狂鐵＝Biron 由使用者確認。
+- **下載**：每次請求間隔 1.5 秒（`--delay`），已有頭像的英雄跳過（`--force` 重新下載），`--only` 可指定英雄。圖片格式以檔案內容判斷（jpg / png / webp），透過 `repo.save_avatar` 存檔，最後更新 `data.json`。
+- **列表頁圖片不是 jpg / png / webp 時**（例如凱格路士是 GIF），改抓英雄介紹頁上的 `*head.jpg` 圖示。
+- 送出的請求使用一般的瀏覽器識別字串，不附任何個人資訊。
+
 ### 之後階段
 
 - `pros` / `cons` 的 `value` 為**乘上權重後**的值，使 `score` 等於所有項目加總。
