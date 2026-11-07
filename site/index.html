@@ -32,9 +32,13 @@
 
       <section class="middle">
         <div class="filters">
-          <div class="class-tabs" id="class-tabs" role="tablist" aria-label="職業"></div>
+          <div class="filter-group">
+            <span class="filter-label" id="class-tabs-label">職業</span>
+            <div class="class-tabs" id="class-tabs" role="tablist" aria-labelledby="class-tabs-label"></div>
+          </div>
           <div class="filter-inputs">
-            <select id="lane-filter" aria-label="分路篩選"></select>
+            <label class="filter-label" for="lane-filter">分路</label>
+            <select id="lane-filter"></select>
             <input id="search" type="search" placeholder="搜尋英雄" autocomplete="off" aria-label="搜尋英雄">
           </div>
         </div>
