@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-11-07T09:17:02+08:00",
+  "exported_at": "2026-11-07T19:46:25+08:00",
   "heroes": [
     {"name": "亞連", "main_class": "戰士", "sub_class": null, "avatar": "亞連.jpg", "form_group": null, "lanes": {"凱撒": "T2"}},
     {"name": "亥犽", "main_class": "射手", "sub_class": null, "avatar": "亥犽.jpg", "form_group": null, "lanes": {"魔龍": "T1"}},
@@ -19,7 +19,7 @@
     {"name": "勇", "main_class": "射手", "sub_class": null, "avatar": "勇.jpg", "form_group": null, "lanes": {"魔龍": "T2"}},
     {"name": "卡瑞茲", "main_class": "輔助", "sub_class": null, "avatar": "卡瑞茲.png", "form_group": null, "lanes": {"輔助": "T1"}},
     {"name": "卡芬妮", "main_class": "射手", "sub_class": null, "avatar": "卡芬妮.jpg", "form_group": null, "lanes": {"魔龍": "T1"}},
-    {"name": "卡莉", "main_class": "法師", "sub_class": null, "avatar": "卡莉.png", "form_group": null, "lanes": {"中路": "T1"}},
+    {"name": "卡莉", "main_class": "法師", "sub_class": null, "avatar": "卡莉.png", "form_group": null, "lanes": {"中路": "T2"}},
     {"name": "古木", "main_class": "輔助", "sub_class": "坦克", "avatar": "古木.jpg", "form_group": null, "lanes": {"輔助": "T1"}},
     {"name": "史蘭茲", "main_class": "射手", "sub_class": null, "avatar": "史蘭茲.png", "form_group": null, "lanes": {"魔龍": "T2"}},
     {"name": "司科德", "main_class": "戰士", "sub_class": "坦克", "avatar": "司科德.jpg", "form_group": null, "lanes": {"凱撒": "T1"}},
